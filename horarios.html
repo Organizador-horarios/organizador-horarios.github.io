@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Armador de horarios</title>
+<meta name="description" content="Pon tus materias y los grupos con sus horas y mira todas las combinaciones de horario sin choques, ordenadas por menos huecos o menos días.">
+<meta name="theme-color" content="#2238d8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap">
+<script>
+/* EDITA AQUÍ */
+window.CONFIG = {
+  nombreSitio: "Bien Elegido",
+  inicio: "https://convertidor-de-fotos-a-stl-gratis.github.io/recomendaciones.html",
+  convertidor: "https://convertidor-de-fotos-a-stl-gratis.github.io/"
+};
+</script>
+<style>
+/* VOICE everyday student tool: calm, exact times, no fuss
+   IDEA the timetable taped inside a locker: a ruled week grid with colored class blocks
+   PICTURE the live week grid for the chosen combination, large, with a pager to flip through options
+   COLOUR white paper, cobalt ink for controls, one color per subject in soft tints, coral for warnings
+   TYPE Archivo 800 condensed for titles + Archivo for text and times
+   LAYOUT laptop: subjects editor left 400px, results right; phone: title, results (grid scrolls sideways), editor */
+:root{
+  color-scheme:light dark;
+  --bg:light-dark(#ffffff,#0e1120);
+  --ink:light-dark(#141622,#eceefa);
+  --muted:light-dark(#4a4f66,#a9afc9);
+  --line:light-dark(#e3e6f1,#283050);
+  --line-2:light-dark(#f0f2f8,#1b2140);
+  --card:light-dark(#ffffff,#151a31);
+  --soft:light-dark(#f3f5ff,#191f3d);
+  --cta:light-dark(#2238d8,#4256ff);
+  --cta-h:light-dark(#1a2bb0,#5568ff);
+  --accent-ink:light-dark(#2238d8,#9fb0ff);
+  --warn:light-dark(#c2361c,#ff8f75);
+  --foot:light-dark(#0f1650,#0a0d1c);
+  --hora:46px;
+}
+:root[data-theme=light]{color-scheme:light}
+:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Archivo,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow-x:clip}
+a{color:inherit}
+.wrap{width:min(1240px,calc(100% - 2*max(5vw,16px)));margin-inline:auto}
+h1,h2,h3{font-weight:800;font-stretch:88%;letter-spacing:-.02em;line-height:1.05;text-wrap:balance;margin:0}
+button,input,select{font:inherit;color:inherit}
+
+.nav{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0 24px;padding-block:6px}
+.brand{display:flex;align-items:center;gap:10px;min-height:48px;font-weight:800;font-stretch:88%;font-size:23px;letter-spacing:-.02em;text-decoration:none}
+.brand svg{width:34px;height:34px;flex:none}
+.links{display:flex;flex-wrap:wrap;gap:0 20px}
+.links a{display:inline-flex;align-items:center;min-height:44px;font-weight:600;text-decoration:none}
+.links a:hover{text-decoration:underline;text-underline-offset:5px}
+.head{padding-block:clamp(16px,3vw,30px) 18px}
+.head h1{font-size:clamp(32px,4.2vw,46px)}
+.head p{margin:10px 0 0;font-size:17px;max-width:66ch;color:var(--muted)}
+
+.app{display:grid;gap:22px;grid-template-columns:minmax(0,1fr);grid-template-areas:"res" "ed";padding-bottom:clamp(36px,5vw,64px)}
+.res{grid-area:res}
+.ed{grid-area:ed}
+@media (min-width:980px){.app{grid-template-columns:minmax(360px,440px) minmax(0,1fr);grid-template-areas:"ed res";align-items:start}}
+
+.res-h{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px 20px;margin-bottom:10px}
+.res-h h2{font-size:clamp(24px,2.6vw,32px)}
+.res-h p{margin:4px 0 0;color:var(--muted);font-size:15px}
+.ctrls{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.ctrls label{font-size:14px;font-weight:600;color:var(--muted)}
+select{height:44px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);padding:0 10px;font-size:16px}
+select:focus,input:focus{outline:3px solid color-mix(in srgb,var(--cta) 30%,transparent);outline-offset:0;border-color:var(--cta)}
+.pager{display:flex;align-items:center;gap:6px}
+.pager button{width:44px;height:44px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);font-size:22px;line-height:1;cursor:pointer}
+.pager button:hover:not(:disabled){border-color:var(--cta);color:var(--accent-ink)}
+.pager button:disabled{opacity:.4;cursor:default}
+.pager button:focus-visible{outline:3px solid color-mix(in srgb,var(--cta) 35%,transparent)}
+.pos{min-width:6.5em;text-align:center;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stats{margin:0 0 12px;font-size:15px;color:var(--muted)}
+.stats b{color:var(--ink)}
+.aviso{margin:0 0 12px;padding:12px 14px;border-radius:12px;border:1.5px solid color-mix(in srgb,var(--warn) 50%,transparent);background:color-mix(in srgb,var(--warn) 7%,transparent);font-size:15px}
+.aviso:empty{display:none}
+
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:var(--card)}
+.semana{display:grid;grid-template-columns:46px repeat(6,minmax(0,1fr));min-width:600px;padding:0 8px 10px 0}
+.eje{position:relative;margin-top:36px;height:calc(var(--h) * var(--hora))}
+.eje span{position:absolute;right:6px;transform:translateY(-50%);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cab{height:36px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;border-bottom:1px solid var(--line)}
+.col{position:relative;height:calc(var(--h) * var(--hora));border-left:1px solid var(--line-2);background:repeating-linear-gradient(to bottom,var(--line) 0 1px,transparent 1px var(--hora))}
+.blq{position:absolute;left:3px;right:3px;border-radius:9px;padding:5px 7px;overflow:hidden;background:color-mix(in srgb,var(--c) 22%,var(--card));border:1.5px solid color-mix(in srgb,var(--c) 75%,var(--card));font-size:13px;line-height:1.25}
+.blq b{display:block;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blq span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+.blq .t{color:var(--ink);font-variant-numeric:tabular-nums;text-overflow:clip}
+.vacio{padding:40px 20px;text-align:center;color:var(--muted)}
+
+.eleccion{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.eleccion li{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:var(--soft);font-size:15px}
+.eleccion i{width:11px;height:11px;border-radius:50%;background:var(--c);flex:none}
+.acc{display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px;margin-top:16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 18px;border-radius:12px;border:0;background:var(--cta);color:#fff;font-weight:700;cursor:pointer}
+.btn:hover{background:var(--cta-h)}
+.btn:focus-visible{outline:3px solid #ffc53d;outline-offset:3px}
+.ghost{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 14px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);font-weight:600;font-size:15px;cursor:pointer}
+.ghost:hover{border-color:var(--cta);color:var(--accent-ink)}
+.ghost:focus-visible{outline:3px solid color-mix(in srgb,var(--cta) 35%,transparent)}
+.nota{font-size:14px;color:var(--muted)}
+#texto{width:100%;min-height:160px;margin-top:10px;border:1.5px solid var(--line);border-radius:10px;padding:10px;font:14px/1.5 ui-monospace,Consolas,monospace;background:var(--bg)}
+
+.ed-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.ed-h h2{font-size:24px}
+.muestra{margin:0 0 12px;font-size:14px;padding:10px 12px;border-radius:10px;background:var(--soft)}
+.mat{border:1px solid var(--line);border-radius:16px;background:var(--card);padding:12px;margin-bottom:12px;border-top:5px solid var(--c)}
+.mat.off{opacity:.6}
+.mat-h{display:grid;grid-template-columns:40px minmax(0,1fr) auto 40px;align-items:center;gap:8px}
+.mat-h input[type=color]{width:40px;height:40px;padding:0;border:1.5px solid var(--line);border-radius:10px;background:none;cursor:pointer}
+.mat-n{height:44px;border:1.5px solid var(--line);border-radius:10px;padding:0 10px;font-size:17px;font-weight:700;background:var(--bg)}
+.sw{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer;min-height:44px}
+.sw input{width:20px;height:20px;accent-color:var(--cta);margin:0;cursor:pointer}
+.x{width:40px;height:40px;border-radius:10px;border:0;background:none;font-size:22px;line-height:1;color:var(--muted);cursor:pointer}
+.x:hover{background:var(--soft);color:var(--warn)}
+.x:focus-visible{outline:3px solid color-mix(in srgb,var(--cta) 35%,transparent)}
+.grp{margin-top:10px;padding:10px;border-radius:12px;background:var(--soft)}
+.grp.off{opacity:.55}
+.grp-h{display:grid;grid-template-columns:64px minmax(0,1fr) auto 40px;align-items:center;gap:8px}
+.grp-h input:not([type=checkbox]),.ses input,.ses select{height:42px;border:1.5px solid var(--line);border-radius:9px;padding:0 8px;font-size:16px;background:var(--bg)}
+.ses{display:grid;grid-template-columns:76px minmax(0,1fr) 10px minmax(0,1fr) 36px;align-items:center;gap:6px;margin-top:8px}
+.ses .x{width:36px}
+.ses input[type=time]{padding:0 6px;cursor:pointer}
+.ses input[type=time]::-webkit-calendar-picker-indicator{display:none}
+.ses span{font-size:14px;color:var(--muted)}
+.ses input.mal{border-color:var(--warn)}
+.mini{margin-top:8px;min-height:40px;padding:0 12px;border-radius:9px;border:1.5px dashed var(--line);background:none;font-size:14px;font-weight:600;color:var(--accent-ink);cursor:pointer}
+.mini:hover{border-color:var(--cta)}
+.ed-f{display:flex;flex-wrap:wrap;gap:10px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:9;display:flex;align-items:center;gap:14px;padding:10px 12px 10px 18px;border-radius:12px;background:#141622;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:calc(100% - 32px)}
+.toast[hidden]{display:none}
+.toast button{min-height:40px;padding:0 14px;border-radius:9px;border:0;background:#ffc53d;color:#141622;font-weight:700;cursor:pointer}
+.foot{background:var(--foot);color:#d9ddf7;padding-block:28px;font-size:14px}
+.foot-in{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 32px}
+.foot .brand{color:#fff;font-size:20px}
+.foot p{margin:0}
+@media (max-width:600px){.ses{grid-template-columns:minmax(0,1fr) 10px minmax(0,1fr) 36px;grid-template-areas:"dia dia dia x" "ini sep fin ."}.ses select{grid-area:dia}.ses input[data-k=ini]{grid-area:ini}.ses span{grid-area:sep}.ses input[data-k=fin]{grid-area:fin}.ses .x{grid-area:x}:root{--hora:42px}.grp-h{grid-template-columns:56px minmax(0,1fr) auto 40px}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="sello" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="19" fill="#ff5b3a"/>
+      <circle cx="20" cy="20" r="14.5" fill="none" stroke="#fff" stroke-width="1.6" stroke-dasharray="2.2 2.6"/>
+      <path d="M13.5 20.5l4.6 4.6 8.4-9.2" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<nav class="nav wrap" aria-label="Principal">
+  <a class="brand" id="marca" href="https://convertidor-de-fotos-a-stl-gratis.github.io/recomendaciones.html"><svg viewBox="0 0 40 40" aria-hidden="true"><use href="#sello" width="40" height="40"/></svg><span data-sitio>Bien Elegido</span></a>
+  <div class="links"><a id="l-inicio" href="https://convertidor-de-fotos-a-stl-gratis.github.io/recomendaciones.html">Recomendaciones</a><a id="l-conv" href="https://convertidor-de-fotos-a-stl-gratis.github.io/">Convertidor de fotos a STL</a></div>
+</nav>
+
+<main class="wrap">
+  <div class="head">
+    <h1>Armador de horarios</h1>
+    <p>Escribe tus materias y los grupos con sus horas. La página prueba todas las combinaciones y te muestra solo las que no tienen choques, ordenadas como prefieras.</p>
+  </div>
+
+  <div class="app">
+    <section class="res" id="resultados" aria-labelledby="titulo-res">
+      <div class="res-h">
+        <div>
+          <h2 id="titulo-res">Calculando…</h2>
+          <p id="sub-res"></p>
+        </div>
+        <div class="ctrls">
+          <label for="orden">Ordenar por</label>
+          <select id="orden">
+            <option value="huecos">Menos huecos</option>
+            <option value="dias">Menos días de clase</option>
+            <option value="tarde">Entrar más tarde</option>
+            <option value="temprano">Salir más temprano</option>
+          </select>
+          <div class="pager">
+            <button type="button" id="prev" aria-label="Horario anterior">‹</button>
+            <span class="pos" id="pos" aria-live="polite"></span>
+            <button type="button" id="next" aria-label="Horario siguiente">›</button>
+          </div>
+        </div>
+      </div>
+      <p class="aviso" id="aviso"></p>
+      <p class="stats" id="stats"></p>
+      <div class="scroll"><div class="semana" id="semana"></div></div>
+      <ul class="eleccion" id="eleccion"></ul>
+      <div class="acc">
+        <button type="button" class="btn" id="copiar">Copiar este horario</button>
+        <span class="nota" id="copiado" aria-live="polite"></span>
+      </div>
+      <textarea id="texto" readonly hidden aria-label="Horario en texto para copiar"></textarea>
+    </section>
+
+    <section class="ed" aria-labelledby="t-mat">
+      <div class="ed-h">
+        <h2 id="t-mat">Tus materias</h2>
+      </div>
+      <p class="muestra" id="muestra" hidden>Ejemplo con materias y horarios inventados. Cambia los nombres y las horas por los tuyos: todo se guarda en este navegador.</p>
+      <div id="materias"></div>
+      <div class="ed-f">
+        <button type="button" class="btn" id="add-m">+ Agregar materia</button>
+        <button type="button" class="ghost" id="ejemplo">Cargar ejemplo</button>
+        <button type="button" class="ghost" id="vaciar">Empezar en blanco</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" hidden><span id="toast-t"></span><button type="button" id="deshacer">Deshacer</button></div>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <a class="brand" id="marca-pie" href="https://convertidor-de-fotos-a-stl-gratis.github.io/recomendaciones.html"><svg viewBox="0 0 40 40" aria-hidden="true"><use href="#sello" width="40" height="40"/></svg><span data-sitio>Bien Elegido</span></a>
+    <p>Tus materias se guardan solo en este navegador. © <span id="anio">2026</span> <span data-sitio>Bien Elegido</span></p>
+  </div>
+</footer>
+
+<script>
+{
+  const $ = s => document.querySelector(s);
+  const C = Object.assign({ nombreSitio: "Bien Elegido", inicio: "", convertidor: "" }, window.CONFIG || {});
+  const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+  const CORTO = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+  const PALETA = ["#ff5b3a", "#2f5bff", "#1e9e6a", "#f2a900", "#8e44ad", "#e0567a", "#0a8fa3", "#8a6340"];
+  const LIMITE = 5000;
+  const CLAVE = "armador-horarios-v1";
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const amin = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ""); return m ? (+m[1]) * 60 + (+m[2]) : NaN; };
+  const hm = m => Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0");
+  const dur = m => { const h = Math.floor(m / 60), r = m % 60; return h && r ? `${h} h ${r} min` : h ? `${h} h` : `${r} min`; };
+  const ses = (dia, ini, fin) => ({ dia, ini, fin });
+  const grupo = (nombre, profe, sesiones) => ({ nombre, profe, activo: true, sesiones });
+
+  function ejemplo() {
+    return [
+      { nombre: "Cálculo Integral", color: PALETA[0], activa: true, grupos: [
+        grupo("G1", "Prof. Ramírez", [ses(0, "07:00", "09:00"), ses(2, "07:00", "09:00")]),
+        grupo("G2", "Prof. Ospina", [ses(1, "10:00", "12:00"), ses(3, "10:00", "12:00")]),
+        grupo("G3", "Prof. Ramírez", [ses(0, "14:00", "16:00"), ses(2, "14:00", "16:00")])] },
+      { nombre: "Física II", color: PALETA[1], activa: true, grupos: [
+        grupo("G1", "Prof. Cárdenas", [ses(0, "08:00", "10:00"), ses(3, "07:00", "09:00")]),
+        grupo("G2", "Prof. Velasco", [ses(1, "11:00", "13:00"), ses(4, "14:00", "16:00")]),
+        grupo("G3", "Prof. Velasco", [ses(2, "14:00", "16:00"), ses(4, "09:00", "11:00")])] },
+      { nombre: "Programación", color: PALETA[2], activa: true, grupos: [
+        grupo("G1", "Prof. Arango", [ses(2, "09:00", "12:00")]),
+        grupo("G2", "Prof. Arango", [ses(4, "07:00", "10:00")]),
+        grupo("G3", "Prof. Mejía", [ses(1, "07:00", "10:00")])] },
+      { nombre: "Inglés III", color: PALETA[3], activa: true, grupos: [
+        grupo("G1", "", [ses(0, "16:00", "18:00"), ses(2, "16:00", "18:00")]),
+        grupo("G2", "", [ses(1, "18:00", "20:00"), ses(3, "18:00", "20:00")]),
+        grupo("G3", "", [ses(5, "08:00", "12:00")])] },
+      { nombre: "Ética", color: PALETA[4], activa: true, grupos: [
+        grupo("G1", "Prof. Duque", [ses(3, "08:00", "10:00")]),
+        grupo("G2", "Prof. Duque", [ses(4, "10:00", "12:00")])] }
+    ];
+  }
+
+  // Estado
+  let M = ejemplo(), esEjemplo = true;
+  try {
+    const g = JSON.parse(localStorage.getItem(CLAVE) || "null");
+    if (g && Array.isArray(g.materias)) { M = g.materias; esEjemplo = !!g.ejemplo; }
+  } catch (e) {}
+  const guardar = () => { try { localStorage.setItem(CLAVE, JSON.stringify({ ejemplo: esEjemplo, materias: M })); } catch (e) {} };
+  let combos = [], idx = 0, rango = [7, 18];
+
+  // Combinaciones sin choques
+  function resolver() {
+    const activas = M.filter(m => m.activa);
+    const lista = activas.map(m => ({
+      m,
+      gs: (m.grupos || []).filter(g => g.activo).map(g => ({
+        g, ses: (g.sesiones || []).map(s => ({ d: +s.dia, a: amin(s.ini), b: amin(s.fin) })).filter(x => x.b > x.a)
+      })).filter(x => x.ses.length)
+    }));
+    const todas = M.flatMap(m => m.activa ? (m.grupos || []).flatMap(g => (g.sesiones || []).map(s => [amin(s.ini), amin(s.fin)])) : []).filter(([a, b]) => b > a);
+    rango = todas.length ? [Math.floor(Math.min(...todas.map(x => x[0])) / 60), Math.ceil(Math.max(...todas.map(x => x[1])) / 60)] : [7, 18];
+    if (rango[1] - rango[0] < 4) rango[1] = rango[0] + 4;
+    const sinGrupos = lista.filter(x => !x.gs.length).map(x => x.m.nombre || "Sin nombre");
+    const posibles = lista.reduce((p, x) => p * Math.max(1, x.gs.length), lista.length ? 1 : 0);
+    const out = [];
+    let cortado = false;
+    if (lista.length && !sinGrupos.length) {
+      const orden = lista.slice().sort((p, q) => p.gs.length - q.gs.length);
+      const ocupado = [[], [], [], [], [], []];
+      const elegido = [];
+      const choca = s => s.some(x => ocupado[x.d] && ocupado[x.d].some(y => x.a < y.b && y.a < x.b));
+      const paso = i => {
+        if (out.length >= LIMITE) { cortado = true; return; }
+        if (i === orden.length) { out.push(elegido.slice()); return; }
+        for (const op of orden[i].gs) {
+          if (choca(op.ses)) continue;
+          op.ses.forEach(x => ocupado[x.d] && ocupado[x.d].push(x));
+          elegido.push({ m: orden[i].m, g: op.g, ses: op.ses });
+          paso(i + 1);
+          elegido.pop();
+          op.ses.forEach(x => { if (ocupado[x.d]) ocupado[x.d].pop(); });
+        }
+      };
+      paso(0);
+    }
+    combos = out.map(c => {
+      const porDia = [0, 1, 2, 3, 4, 5].map(d => c.flatMap(x => x.ses.filter(s => s.d === d)).sort((p, q) => p.a - q.a));
+      const dias = porDia.filter(l => l.length).length;
+      const huecos = porDia.reduce((t, l) => t + l.slice(1).reduce((u, s, k) => u + Math.max(0, s.a - l[k].b), 0), 0);
+      const entradas = porDia.filter(l => l.length).map(l => l[0].a);
+      const salidas = porDia.filter(l => l.length).map(l => l[l.length - 1].b);
+      return { c, dias, huecos, entrada: Math.min(...entradas), salida: Math.max(...salidas), entradaMedia: entradas.reduce((a, b) => a + b, 0) / entradas.length, salidaMedia: salidas.reduce((a, b) => a + b, 0) / salidas.length };
+    });
+    ordenar();
+    return { activas: lista.length, posibles, sinGrupos, cortado };
+  }
+  function ordenar() {
+    const k = $("#orden").value;
+    const f = {
+      huecos: (a, b) => a.huecos - b.huecos || a.dias - b.dias || a.salidaMedia - b.salidaMedia,
+      dias: (a, b) => a.dias - b.dias || a.huecos - b.huecos,
+      tarde: (a, b) => b.entradaMedia - a.entradaMedia || a.huecos - b.huecos,
+      temprano: (a, b) => a.salidaMedia - b.salidaMedia || a.huecos - b.huecos
+    }[k];
+    combos.sort(f);
+  }
+
+  // Resultados
+  function pintar(info) {
+    const n = combos.length;
+    idx = Math.min(idx, Math.max(0, n - 1));
+    $("#titulo-res").textContent = n === 0 ? "Ningún horario sin choques" : n === 1 ? "1 horario sin choques" : `${n.toLocaleString("es-CO")}${info.cortado ? "+" : ""} horarios sin choques`;
+    $("#sub-res").textContent = info.activas ? `de ${info.posibles.toLocaleString("es-CO")} combinaciones posibles con ${info.activas} ${info.activas === 1 ? "materia" : "materias"}` : "";
+    let aviso = "";
+    if (!info.activas) aviso = "Agrega una materia o marca «Incluir» en alguna para ver horarios.";
+    else if (info.sinGrupos.length) aviso = `Sin grupos con horas válidas: ${info.sinGrupos.join(", ")}. Activa un grupo o revisa que la hora final sea después de la inicial.`;
+    else if (!n) aviso = "Todas las combinaciones chocan. Prueba a quitar «Incluir» en una materia o activa más grupos.";
+    else if (info.cortado) aviso = `Hay más de ${LIMITE.toLocaleString("es-CO")} combinaciones; se muestran las primeras. Desactiva grupos que no te sirvan para afinar.`;
+    $("#aviso").textContent = aviso;
+    $("#pos").textContent = n ? `${idx + 1} de ${n.toLocaleString("es-CO")}` : "0 de 0";
+    $("#prev").disabled = idx <= 0;
+    $("#next").disabled = idx >= n - 1;
+    $("#copiar").disabled = !n;
+    $("#texto").hidden = true;
+    $("#copiado").textContent = "";
+    const r = combos[idx];
+    $("#stats").innerHTML = r ? `<b>${r.dias} ${r.dias === 1 ? "día" : "días"}</b> de clase · <b>${r.huecos ? dur(r.huecos) : "sin huecos"}</b>${r.huecos ? " de huecos" : ""} · primera clase a las <b>${hm(r.entrada)}</b> · última termina a las <b>${hm(r.salida)}</b>` : "";
+    semana(r ? r.c : null);
+    $("#eleccion").innerHTML = r ? r.c.slice().sort((a, b) => M.indexOf(a.m) - M.indexOf(b.m)).map(x => `<li style="--c:${esc(x.m.color)}"><i></i><b>${esc(x.m.nombre || "Sin nombre")}</b>${esc(x.g.nombre)}${x.g.profe ? " · " + esc(x.g.profe) : ""}</li>`).join("") : "";
+  }
+  function semana(c) {
+    const [h0, h1] = rango, H = h1 - h0;
+    const sem = $("#semana");
+    sem.style.setProperty("--h", H);
+    let html = `<div class="eje">${Array.from({ length: H + 1 }, (_, i) => `<span style="top:${i / H * 100}%">${h0 + i}:00</span>`).join("")}</div>`;
+    for (let d = 0; d < 6; d++) {
+      const bl = c ? c.flatMap(x => x.ses.filter(s => s.d === d).map(s => ({ x, s }))) : [];
+      html += `<div class="dia"><div class="cab">${CORTO[d]}</div><div class="col">${bl.map(({ x, s }) => {
+        const top = (s.a - h0 * 60) / (H * 60) * 100, alto = (s.b - s.a) / (H * 60) * 100;
+        return `<div class="blq" style="top:${top}%;height:${alto}%;--c:${esc(x.m.color)}" title="${esc(x.m.nombre)} · ${esc(x.g.nombre)} · ${hm(s.a)}–${hm(s.b)}"><b>${esc(x.m.nombre || "Sin nombre")}</b><span class="t">${hm(s.a)}–${hm(s.b)}</span><span>${esc(x.g.nombre)}${x.g.profe ? " · " + esc(x.g.profe) : ""}</span></div>`;
+      }).join("")}</div></div>`;
+    }
+    sem.innerHTML = html;
+  }
+  let reloj = 0, infoActual = null;
+  const pintarTodo = () => { infoActual = resolver(); idx = 0; pintar(infoActual); };
+  const recalcular = (ms) => { clearTimeout(reloj); reloj = setTimeout(pintarTodo, ms ?? 200); };
+
+  // Editor
+  function editor() {
+    $("#muestra").hidden = !esEjemplo;
+    $("#materias").innerHTML = M.map((m, mi) => `
+      <section class="mat${m.activa ? "" : " off"}" style="--c:${esc(m.color)}" aria-label="${esc(m.nombre || "Materia")}">
+        <div class="mat-h">
+          <input type="color" value="${esc(m.color)}" data-m="${mi}" data-k="color" aria-label="Color de ${esc(m.nombre || "la materia")}">
+          <input class="mat-n" value="${esc(m.nombre)}" data-m="${mi}" data-k="nombre" placeholder="Nombre de la materia" aria-label="Nombre de la materia">
+          <label class="sw"><input type="checkbox" ${m.activa ? "checked" : ""} data-m="${mi}" data-k="activa"> Incluir</label>
+          <button type="button" class="x" data-act="del-m" data-m="${mi}" aria-label="Eliminar ${esc(m.nombre || "materia")}">×</button>
+        </div>
+        ${(m.grupos || []).map((g, gi) => `
+          <div class="grp${g.activo ? "" : " off"}">
+            <div class="grp-h">
+              <input value="${esc(g.nombre)}" data-m="${mi}" data-g="${gi}" data-k="nombre" aria-label="Nombre del grupo" placeholder="G1">
+              <input value="${esc(g.profe)}" data-m="${mi}" data-g="${gi}" data-k="profe" aria-label="Profesor" placeholder="Profesor (opcional)">
+              <label class="sw"><input type="checkbox" ${g.activo ? "checked" : ""} data-m="${mi}" data-g="${gi}" data-k="activo"> Usar</label>
+              <button type="button" class="x" data-act="del-g" data-m="${mi}" data-g="${gi}" aria-label="Eliminar grupo ${esc(g.nombre)}">×</button>
+            </div>
+            ${(g.sesiones || []).map((s, si) => `
+              <div class="ses">
+                <select data-m="${mi}" data-g="${gi}" data-s="${si}" data-k="dia" aria-label="Día">${CORTO.map((d, i) => `<option value="${i}"${+s.dia === i ? " selected" : ""}>${d}</option>`).join("")}</select>
+                <input type="time" step="300" value="${esc(s.ini)}" data-m="${mi}" data-g="${gi}" data-s="${si}" data-k="ini" aria-label="Hora de inicio"${amin(s.fin) > amin(s.ini) ? "" : ' class="mal"'}>
+                <span aria-hidden="true">–</span>
+                <input type="time" step="300" value="${esc(s.fin)}" data-m="${mi}" data-g="${gi}" data-s="${si}" data-k="fin" aria-label="Hora de fin"${amin(s.fin) > amin(s.ini) ? "" : ' class="mal"'}>
+                <button type="button" class="x" data-act="del-s" data-m="${mi}" data-g="${gi}" data-s="${si}" aria-label="Eliminar esta clase">×</button>
+              </div>`).join("")}
+            <button type="button" class="mini" data-act="add-s" data-m="${mi}" data-g="${gi}">+ Otra clase de este grupo</button>
+          </div>`).join("")}
+        <button type="button" class="mini" data-act="add-g" data-m="${mi}">+ Agregar grupo</button>
+      </section>`).join("");
+  }
+  const objetivo = el => {
+    const m = M[+el.dataset.m];
+    if (!m) return null;
+    if (el.dataset.g === undefined) return m;
+    const g = m.grupos[+el.dataset.g];
+    if (el.dataset.s === undefined) return g;
+    return g && g.sesiones[+el.dataset.s];
+  };
+  function cambio(e) {
+    const el = e.target;
+    if (!el.dataset || !el.dataset.k) return;
+    const o = objetivo(el);
+    if (!o) return;
+    const k = el.dataset.k;
+    o[k] = el.type === "checkbox" ? el.checked : k === "dia" ? +el.value : el.value;
+    esEjemplo = false;
+    $("#muestra").hidden = true;
+    if (k === "color") el.closest(".mat").style.setProperty("--c", el.value);
+    if (k === "activa") el.closest(".mat").classList.toggle("off", !el.checked);
+    if (k === "activo") el.closest(".grp").classList.toggle("off", !el.checked);
+    if (k === "ini" || k === "fin") {
+      const fila = el.closest(".ses");
+      const [a, b] = fila.querySelectorAll("input[type=time]");
+      const mal = !(amin(b.value) > amin(a.value));
+      a.classList.toggle("mal", mal); b.classList.toggle("mal", mal);
+    }
+    guardar();
+    recalcular();
+  }
+  $("#materias").addEventListener("input", cambio);
+  $("#materias").addEventListener("click", e => { const t = e.target; if (t.matches && t.matches("input[type=time]")) { try { t.showPicker(); } catch (err) {} } });
+  $("#materias").addEventListener("change", cambio);
+
+  let respaldo = null, relojToast = 0;
+  function toast(msg) {
+    $("#toast-t").textContent = msg;
+    $("#toast").hidden = false;
+    clearTimeout(relojToast);
+    relojToast = setTimeout(() => { $("#toast").hidden = true; respaldo = null; }, 8000);
+  }
+  function aplicar(fn, msg) {
+    if (msg) respaldo = JSON.stringify({ M, esEjemplo });
+    fn();
+    guardar(); editor(); recalcular(0);
+    if (msg) toast(msg);
+  }
+  $("#deshacer").addEventListener("click", () => {
+    if (!respaldo) return;
+    const r = JSON.parse(respaldo);
+    M = r.M; esEjemplo = r.esEjemplo; respaldo = null;
+    $("#toast").hidden = true;
+    guardar(); editor(); recalcular(0);
+  });
+  $("#materias").addEventListener("click", e => {
+    const b = e.target.closest("[data-act]");
+    if (!b) return;
+    const mi = +b.dataset.m, gi = +b.dataset.g, si = +b.dataset.s;
+    const m = M[mi];
+    esEjemplo = false;
+    if (b.dataset.act === "del-m") aplicar(() => M.splice(mi, 1), `Materia «${m.nombre || "sin nombre"}» eliminada`);
+    else if (b.dataset.act === "del-g") aplicar(() => m.grupos.splice(gi, 1), `Grupo ${m.grupos[gi].nombre} eliminado`);
+    else if (b.dataset.act === "del-s") aplicar(() => m.grupos[gi].sesiones.splice(si, 1), "Clase eliminada");
+    else if (b.dataset.act === "add-g") {
+      aplicar(() => m.grupos.push(grupo("G" + (m.grupos.length + 1), "", [ses(0, "07:00", "09:00")])));
+      const grupos = document.querySelectorAll(".mat")[mi].querySelectorAll(".grp");
+      const nuevo = grupos[grupos.length - 1];
+      if (nuevo) nuevo.querySelector("input").focus();
+    } else if (b.dataset.act === "add-s") {
+      const g = m.grupos[gi], ult = g.sesiones[g.sesiones.length - 1];
+      aplicar(() => g.sesiones.push(ult ? ses(Math.min(5, +ult.dia + 2), ult.ini, ult.fin) : ses(0, "07:00", "09:00")));
+    }
+  });
+  $("#add-m").addEventListener("click", () => {
+    esEjemplo = false;
+    aplicar(() => M.push({ nombre: "", color: PALETA[M.length % PALETA.length], activa: true, grupos: [grupo("G1", "", [ses(0, "07:00", "09:00")])] }));
+    const mats = document.querySelectorAll(".mat");
+    mats[mats.length - 1].querySelector(".mat-n").focus();
+  });
+  $("#ejemplo").addEventListener("click", () => aplicar(() => { M = ejemplo(); esEjemplo = true; }, "Ejemplo cargado"));
+  $("#vaciar").addEventListener("click", () => aplicar(() => { M = [{ nombre: "", color: PALETA[0], activa: true, grupos: [grupo("G1", "", [ses(0, "07:00", "09:00")])] }]; esEjemplo = false; }, "Empezaste en blanco"));
+
+  // Navegación y copia
+  const mover = d => { const n = combos.length; if (!n) return; idx = Math.min(n - 1, Math.max(0, idx + d)); pintar(infoActual); };
+  $("#prev").addEventListener("click", () => mover(-1));
+  $("#next").addEventListener("click", () => mover(1));
+  $("#resultados").addEventListener("keydown", e => {
+    if (e.target.closest("select")) return;
+    if (e.key === "ArrowLeft") { e.preventDefault(); mover(-1); }
+    if (e.key === "ArrowRight") { e.preventDefault(); mover(1); }
+  });
+  $("#orden").addEventListener("change", () => { ordenar(); idx = 0; pintar(infoActual); });
+  $("#copiar").addEventListener("click", async () => {
+    const r = combos[idx];
+    if (!r) return;
+    const texto = DIAS.map((d, i) => {
+      const bl = r.c.flatMap(x => x.ses.filter(s => s.d === i).map(s => ({ x, s }))).sort((p, q) => p.s.a - q.s.a);
+      return bl.length ? d + "\n" + bl.map(({ x, s }) => `  ${hm(s.a)}–${hm(s.b)}  ${x.m.nombre || "Sin nombre"} (${x.g.nombre}${x.g.profe ? ", " + x.g.profe : ""})`).join("\n") : "";
+    }).filter(Boolean).join("\n\n");
+    try {
+      await navigator.clipboard.writeText(texto);
+      $("#copiado").textContent = "Copiado. Pégalo donde quieras.";
+    } catch (e) {
+      const t = $("#texto");
+      t.value = texto; t.hidden = false; t.focus(); t.select();
+      $("#copiado").textContent = "Selecciona el texto y cópialo con Ctrl + C.";
+    }
+  });
+
+  document.querySelectorAll("[data-sitio]").forEach(el => { el.textContent = C.nombreSitio; });
+  if (/^https?:\/\//i.test(C.inicio)) ["#marca", "#marca-pie", "#l-inicio"].forEach(s => { $(s).href = C.inicio; });
+  if (/^https?:\/\//i.test(C.convertidor)) $("#l-conv").href = C.convertidor;
+  $("#anio").textContent = new Date().getFullYear();
+
+  editor();
+  pintarTodo();
+}
+</script>
+</body>
+</html>
